@@ -465,7 +465,8 @@ void AudioPolicyService::updateUidStates_l()
         }
 
         bool isAssistant = mUidPolicy->isAssistantUid(current->uid);
-        if (appState == APP_STATE_TOP) {
+        bool isAccessibility = mUidPolicy->isA11yUid(current->uid);
+        if (appState == APP_STATE_TOP && !isAccessibility) {
             if (current->startTimeNs > topStartNs) {
                 topActive = current;
                 topStartNs = current->startTimeNs;
@@ -474,10 +475,13 @@ void AudioPolicyService::updateUidStates_l()
                 isAssistantOnTop = true;
             }
         }
-        // Assistant capturing for HOTWORD not considered for latest active to avoid
-        // masking regular clients started before
-        if (current->startTimeNs > latestStartNs &&
-            !(current->attributes.source == AUDIO_SOURCE_HOTWORD && isAssistant)) {
+        // Assistant capturing for HOTWORD or Accessibility services not considered
+        // for latest active to avoid masking regular clients started before
+        if (current->startTimeNs > latestStartNs
+                && !((current->attributes.source == AUDIO_SOURCE_HOTWORD
+                        || isA11yOnTop || rttCallActive)
+                    && isAssistant)
+                && !isAccessibility) {
             latestActive = current;
             latestStartNs = current->startTimeNs;
         }
